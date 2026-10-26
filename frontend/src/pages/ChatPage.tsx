@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Bot, Send, User, ChevronDown, Check, Paperclip, Globe2, X, FileText, Image as ImageIcon, LoaderCircle, Square, MessageCircle, BookOpen, Search } from 'lucide-react';
+import { Bot, Send, User, ChevronDown, Check, Paperclip, Globe2, X, FileText, Image as ImageIcon, LoaderCircle, Square, MessageCircle, BookOpen, Search, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -35,8 +35,8 @@ function MessageItem({ msg, models }: { msg: ChatMessage; models: AvailableModel
     : undefined;
   
   return (
-    <div className={`flex gap-4 ${isUser ? 'flex-row-reverse' : ''} w-full`}>
-      <Avatar className="w-8 h-8 shrink-0 mt-1">
+    <div className={`chat-message-row flex gap-4 ${isUser ? 'flex-row-reverse' : ''} w-full`}>
+      <Avatar className={`chat-message-avatar w-8 h-8 shrink-0 mt-1 ${isUser ? 'chat-message-avatar-user' : 'chat-message-avatar-ai'}`}>
         {isUser ? (
           <AvatarFallback className="bg-primary/20"><User className="w-4 h-4" /></AvatarFallback>
         ) : (
@@ -45,7 +45,7 @@ function MessageItem({ msg, models }: { msg: ChatMessage; models: AvailableModel
       </Avatar>
       
       <div className={`flex flex-col gap-2 max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
-        <div className={`px-4 py-3 rounded-2xl ${
+        <div className={`chat-message-bubble px-4 py-3 rounded-2xl ${isUser ? 'chat-message-bubble-user' : 'chat-message-bubble-ai'} ${
           isUser 
             ? 'border border-primary/35 bg-[linear-gradient(135deg,hsl(var(--card)),hsl(var(--secondary)))] text-foreground shadow-[0_8px_24px_rgba(212,155,26,0.10)] rounded-tr-sm' 
             : 'bg-muted/50 border rounded-tl-sm'
@@ -221,7 +221,7 @@ export default function ChatPage() {
   return (
     <div className="chat-workspace flex flex-col h-full">
       {/* Top Header */}
-      <header className="h-14 border-b flex items-center px-4 justify-between bg-background/95 backdrop-blur z-10">
+      <header className="chat-topbar h-14 border-b flex items-center px-4 justify-between bg-background/95 backdrop-blur z-10">
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -252,20 +252,21 @@ export default function ChatPage() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        <div className="chat-topbar-note"><span><Sparkles size={13} /></span> Your AI workspace</div>
       </header>
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-4" ref={scrollRef}>
+      <div className="chat-messages-scroll flex-1 overflow-y-auto p-4" ref={scrollRef}>
         <div className="max-w-3xl mx-auto space-y-6 pb-6">
           {messages.length === 0 && !isGenerating ? (
             /* Empty State */
-            <div className="h-[58vh] flex flex-col items-center justify-center text-center space-y-4">
+            <div className="chat-empty-state h-[58vh] flex flex-col items-center justify-center text-center space-y-4">
               <div className="brand-orb chat-brand-orb flex items-center justify-center rounded-xl">
                 <GoldmineLogo size="medium" className="h-full w-full rounded-[0.6rem]" />
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-[0.22em] text-primary/90">Your research workspace</p>
-                <h2 className="text-3xl font-semibold tracking-tight">What are we thinking through?</h2>
+                <p className="text-xs font-medium uppercase tracking-[0.22em] text-primary/90">Your AI workspace</p>
+                <h2 className="text-3xl font-semibold tracking-tight">What can we figure out?</h2>
               </div>
               <p className="text-muted-foreground max-w-md text-sm leading-6">
                 Goldmine knows when to answer directly and when to bring its best AI minds together.
@@ -313,17 +314,17 @@ export default function ChatPage() {
       </div>
 
       {/* Input Area */}
-      <div className="p-4 bg-background">
+      <div className="chat-composer-dock p-4 bg-background">
         <div className="composer-shell max-w-3xl mx-auto relative">
           {attachments.length > 0 && <div className="mb-2 flex flex-wrap gap-2">{attachments.map((attachment) => <span key={attachment.id} className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs">{attachment.mime_type.startsWith('image/') ? <ImageIcon className="h-3.5 w-3.5 text-primary" /> : <FileText className="h-3.5 w-3.5 text-primary" />}{attachment.file_name}<button type="button" aria-label={`Remove ${attachment.file_name}`} onClick={() => void removeAttachment(attachment)} className="rounded text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button></span>)}</div>}
           {attachments.some((attachment) => attachment.mime_type.startsWith('image/')) && <p className="mb-2 px-1 text-[11px] text-muted-foreground">Images are analyzed by Goldmine’s free vision model. Avoid confidential or personal images.</p>}
           {uploading && <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><LoaderCircle className="h-3.5 w-3.5 animate-spin" />Uploading files · {uploadProgress ?? 0}%</div>}
-          <form onSubmit={handleSubmit} className="relative">
+          <form onSubmit={handleSubmit} className="chat-composer-form relative">
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask anything..."
-              className="min-h-[60px] max-h-[200px] pl-24 pr-28 resize-none rounded-xl bg-muted/50 border-muted-foreground/20 focus-visible:ring-primary/50 text-base py-4"
+              className="chat-composer-textarea min-h-[60px] max-h-[200px] pl-24 pr-28 resize-none rounded-xl bg-muted/50 border-muted-foreground/20 focus-visible:ring-primary/50 text-base py-4"
               rows={1}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {

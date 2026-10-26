@@ -9,6 +9,9 @@ interface AuthState {
   initialized: boolean;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
+  resetPassword: (email: string) => Promise<{ error: string | null }>;
+  updatePassword: (password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   initialize: () => Promise<void>;
 }
@@ -56,6 +59,47 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ loading: true });
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
+      set({ loading: false });
+      return { error: error?.message ?? null };
+    } catch (e: any) {
+      set({ loading: false });
+      return { error: e.message };
+    }
+  },
+
+  signInWithGoogle: async () => {
+    set({ loading: true });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/app` },
+      });
+      set({ loading: false });
+      return { error: error?.message ?? null };
+    } catch (e: any) {
+      set({ loading: false });
+      return { error: e.message };
+    }
+  },
+
+  resetPassword: async (email: string) => {
+    set({ loading: true });
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?mode=reset`,
+      });
+      set({ loading: false });
+      return { error: error?.message ?? null };
+    } catch (e: any) {
+      set({ loading: false });
+      return { error: e.message };
+    }
+  },
+
+  updatePassword: async (password: string) => {
+    set({ loading: true });
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
       set({ loading: false });
       return { error: error?.message ?? null };
     } catch (e: any) {
