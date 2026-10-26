@@ -1,0 +1,141 @@
+// Goldmine AI Prisma Schema
+// Used by the Python FastAPI backend via prisma-client-py
+
+generator client {
+  provider = "prisma-client-py"
+  interface = "asyncio"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Profile {
+  id           String       @id @default(uuid()) @db.Uuid // Matches auth.users.id
+  email        String       @unique
+  display_name String?
+  avatar_url   String?
+  created_at   DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime     @default(now()) @updatedAt @db.Timestamptz(6)
+  
+  chats        Chat[]
+  memories     Memory[]
+  messages     Message[]
+  attachments  Attachment[]
+
+  @@map("profiles")
+}
+
+model Chat {
+  id         String    @id @default(uuid()) @db.Uuid
+  user_id    String    @db.Uuid
+  title      String    @default("New Chat")
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  user       Profile   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  messages   Message[]
+
+  @@index([user_id])
+  @@index([updated_at(sort: Desc)])
+  @@map("chats")
+}
+
+model Message {
+  id         String   @id @default(uuid()) @db.Uuid
+  chat_id    String   @db.Uuid
+  user_id    String   @db.Uuid
+  role       String   // "user", "assistant", "system"
+  content    String
+  image_urls Json?    // Array of strings
+  client_request_id String? @unique @db.Uuid
+  provider_failures Json?
+  web_research Boolean @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  chat            Chat             @relation(fields: [chat_id], references: [id], onDelete: Cascade)
+  user            Profile          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  model_responses ModelResponse[]
+  sources         Source[]
+  attachments     Attachment[]
+
+  @@index([chat_id])
+  @@index([created_at])
+  @@map("messages")
+}
+
+model ModelResponse {
+  id                 String   @id @default(uuid()) @db.Uuid
+  message_id         String   @db.Uuid
+  model_id           String
+  provider           String
+  content            String
+  goldmine_score     Float?   @db.Real
+  evaluation_signals Json?
+  selected           Boolean  @default(false)
+  latency_ms         Int?
+  web_verified       Boolean  @default(false)
+  response_type      String   @default("model") // model, synthesis, failed
+  selection_explanation String?
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+
+  message Message @relation(fields: [message_id], references: [id], onDelete: Cascade)
+
+  @@index([message_id])
+  @@map("model_responses")
+}
+
+model Source {
+  id              String   @id @default(uuid()) @db.Uuid
+  message_id      String   @db.Uuid
+  title           String
+  url             String
+  domain          String
+  relevance_score Float?   @db.Real
+  support_type    String   // "supporting", "contradicting", "neutral"
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  message Message @relation(fields: [message_id], references: [id], onDelete: Cascade)
+
+  @@index([message_id])
+  @@map("sources")
+}
+
+model Memory {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  content    String
+  category   String?  @default("general")
+  importance Int?     @default(5)
+  source     String?  @default("user")
+  enabled    Boolean? @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  user Profile @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("memories")
+}
+
+model Attachment {
+  id           String   @id @default(uuid()) @db.Uuid
+  user_id      String   @db.Uuid
+  message_id   String?  @db.Uuid
+  storage_path String
+  file_name    String
+  mime_type    String
+  size_bytes   Int      @default(0)
+  extracted_text String?
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  user    Profile  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  message Message? @relation(fields: [message_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([message_id])
+  @@map("attachments")
+}

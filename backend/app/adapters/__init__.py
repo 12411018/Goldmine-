@@ -1,0 +1,1 @@
+# Goldmine AI — Adapters package
